@@ -91,6 +91,63 @@ type Department struct {
 	Option string
 }
 
+func fetchCourses(depts []string) {
+	departments, err := parsers.AllDepartments()
+	if err != nil {
+		panic(err)
+	}
+	
+	steps := make([]Department, 0)
+	if len(depts) > 0 {
+		for _, dept := range depts {
+			if deptURL, ok := departments[dept]; ok {
+				steps = append(steps, Department{Dept: dept, Option: deptURL})
+			}
+		}
+	} else {
+		for dept, deptURL := range departments {
+			steps = append(steps, Department{Dept: dept, Option: deptURL})
+		}
+	}
+	
+	uiprogress.Start()
+	width, _ := terminal.Width()
+	bar := uiprogress.AddBar(len(steps) + 1)
+	bar.Width = int(width) - (8 + 1) - (1 + 4)
+	bar.AppendCompleted()
+	
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		step := "LOADING"
+		if b.Current() == len(steps) {
+			step = "DONE"
+		} else if b.Current() > 0 {
+			step = steps[b.Current()-1].Dept
+		}
+		return fmt.Sprintf("%-8s", step)
+	})
+	
+	process := func(dept, deptURL string) {
+		responseHTML, err := parsers.FetchCatalogue(deptURL)
+		if err != nil {
+			panic(err)
+		}
+		dir := strings.Replace(dept, "/", "_", -1)
+		filepath := fmt.Sprintf("/var/www/registrar/%v/", dir)
+		os.MkdirAll(filepath, 0755)
+		err = ioutil.WriteFile(filepath + "catalogue.html", []byte(responseHTML), 0644)
+		if err != nil {
+			panic(err)
+		}
+	}
+	
+	for _, d := range steps {
+		bar.Incr()
+		time.Sleep(10 * time.Second)
+		process(d.Dept, d.Option)
+	}
+	bar.Incr()
+}
+
 func fetchPrereqs(depts []string) {
 	term, deptOptions, err := parsers.PDepartmentOptions()
 	if err != nil {
@@ -253,6 +310,7 @@ func main() {
 	studentIDptr := flag.String("studentID", "", "Fetch DegreeWorks XML file for the specified student ID.")
 	cookiePtr := flag.String("cookie", "", "Fetch DegreeWorks XML file using specified cookies.")
 	cachePtr := flag.Bool("cache", false, "Cache fetched content on disk.")
+	cataloguePtr := flag.Bool("catalogue", false, "Fetch courses from Course Catalogue.")
 	prereqsPtr := flag.Bool("prereqs", false, "Fetch prerequisites from WebSOC.")
 	schedulesPtr := flag.Bool("schedules", false, "Fetch schedules from WebSOC.")
 	archivePtr := flag.Bool("archive", false, "Fetch the past two years of schedules from WebSOC.")
@@ -292,6 +350,8 @@ func main() {
 		} else {
 			fmt.Println(responseXML)
 		}
+	} else if *cataloguePtr {
+		fetchCourses(depts)
 	} else if *prereqsPtr {
 		fetchPrereqs(depts)
 	} else if *schedulesPtr {
