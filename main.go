@@ -7,6 +7,7 @@ import (
 	"github.com/gosuri/uiprogress"
 	"github.com/nicolasgomollon/peterplanner/helpers"
 	"github.com/nicolasgomollon/peterplanner/parsers"
+	"github.com/nicolasgomollon/peterplanner/types"
 	terminal "github.com/wayneashleyberry/terminal-dimensions"
 	"html"
 	"io/ioutil"
@@ -210,7 +211,7 @@ func fetchSchedules(depts []string, archive bool) {
 	if err != nil {
 		panic(err)
 	}
-	if !parsers.IsAcademicTerm(term) {
+	if !types.IsAcademicTerm(term) {
 		fmt.Println("WebSOC is not currently in an academic term.")
 		return
 	}
@@ -218,8 +219,8 @@ func fetchSchedules(depts []string, archive bool) {
 	steps := make([]Department, 0)
 	if archive {
 		yearTerm := term
-		year := parsers.AcademicYear() + 1
-		f := []interface{}{parsers.FallQuarter, parsers.SpringQuarter, parsers.WinterQuarter}
+		year := types.AcademicYear() + 1
+		f := []interface{}{types.FallQuarter, types.SpringQuarter, types.WinterQuarter}
 		
 		for i := 1; i <= 9; i++ {
 			if (i % 3) == 0 {
@@ -269,11 +270,11 @@ func fetchSchedules(depts []string, archive bool) {
 		} else if b.Current() > 0 {
 			d := steps[b.Current()-1]
 			t := ""
-			if parsers.IsFQ(d.Term) {
+			if types.IsFQ(d.Term) {
 				t = "F"
-			} else if parsers.IsWQ(d.Term) {
+			} else if types.IsWQ(d.Term) {
 				t = "W"
-			} else if parsers.IsSQ(d.Term) {
+			} else if types.IsSQ(d.Term) {
 				t = "S"
 			}
 			y := d.Term[2:4]
