@@ -203,8 +203,13 @@ func fetchPrereqs(depts []string) {
 		return fmt.Sprintf("%-8s", step)
 	})
 	
-	process := func(dept, option string) {
+	r, _ := regexp.Compile(`(?s)<td class="error_message".*?>\s*(.*?)\s*</td>`)
+	process := func(dept, option string) bool {
 		responseHTML, err := parsers.FetchPrerequisites(term, option)
+		errorMatches := r.FindStringSubmatch(responseHTML)
+		if len(errorMatches) > 0 {
+			return false
+		}
 		if err != nil {
 			panic(err)
 		}
@@ -215,12 +220,16 @@ func fetchPrereqs(depts []string) {
 		if err != nil {
 			panic(err)
 		}
+		return true
 	}
 	
 	for _, d := range steps {
 		bar.Incr()
 		time.Sleep(10 * time.Second)
-		process(d.Dept, d.Option)
+		if !process(d.Dept, d.Option) {
+			// An error was encountered, try again?
+			process(d.Dept, d.Option)
+		}
 	}
 	bar.Incr()
 }
