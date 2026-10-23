@@ -32,12 +32,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 )
 
-const RootPath = "/var/www/"
 const DegreeWorksURL = "https://www.reg.uci.edu/dgw/IRISLink.cgi"
 
 func fetchStudentID(cookie string) (string, error) {
@@ -152,9 +152,9 @@ func fetchCourses(depts []string) {
 			panic(err)
 		}
 		dir := strings.Replace(dept, "/", "_", -1)
-		filepath := fmt.Sprintf(RootPath+"registrar/%v/", dir)
-		os.MkdirAll(filepath, 0755)
-		err = ioutil.WriteFile(filepath+"catalogue.html", []byte(responseHTML), 0644)
+		dirPath := helpers.RegistrarPath(dir)
+		os.MkdirAll(dirPath, 0755)
+		err = ioutil.WriteFile(filepath.Join(dirPath, "catalogue.html"), []byte(responseHTML), 0644)
 		if err != nil {
 			panic(err)
 		}
@@ -214,9 +214,9 @@ func fetchPrereqs(depts []string) {
 			panic(err)
 		}
 		dir := strings.Replace(dept, "/", "_", -1)
-		filepath := fmt.Sprintf(RootPath+"registrar/%v/", dir)
-		os.MkdirAll(filepath, 0755)
-		err = ioutil.WriteFile(filepath+"prereqs.html", []byte(responseHTML), 0644)
+		dirPath := helpers.RegistrarPath(dir)
+		os.MkdirAll(dirPath, 0755)
+		err = ioutil.WriteFile(filepath.Join(dirPath, "prereqs.html"), []byte(responseHTML), 0644)
 		if err != nil {
 			panic(err)
 		}
@@ -315,8 +315,8 @@ func fetchSchedules(depts []string, archive bool) {
 	courseNums := make([]string, 0)
 	process := func(yearTerm, dept, option string) {
 		dir := strings.Replace(dept, "/", "_", -1)
-		filepath := fmt.Sprintf(RootPath+"registrar/%v/", dir)
-		socFile := filepath + fmt.Sprintf("soc_%v.txt", yearTerm)
+		dirPath := helpers.RegistrarPath(dir)
+		socFile := filepath.Join(dirPath, fmt.Sprintf("soc_%v.txt", yearTerm))
 		if archive {
 			if _, err := os.Stat(socFile); err == nil {
 				return
@@ -327,7 +327,7 @@ func fetchSchedules(depts []string, archive bool) {
 		if err != nil {
 			panic(err)
 		}
-		os.MkdirAll(filepath, 0755)
+		os.MkdirAll(dirPath, 0755)
 		err = ioutil.WriteFile(socFile, []byte(responseTXT), 0644)
 		if err != nil {
 			panic(err)
@@ -377,8 +377,8 @@ func main() {
 		}
 
 		if *cachePtr {
-			filepath := fmt.Sprintf(RootPath+"DGW_Report-%v.xsl", *studentIDptr)
-			err = ioutil.WriteFile(filepath, []byte(responseXML), 0644)
+			dirPath := helpers.ReportPath(*studentIDptr)
+			err = ioutil.WriteFile(dirPath, []byte(responseXML), 0644)
 			if err != nil {
 				panic(err)
 			}
