@@ -65,10 +65,10 @@ func fetchStudentDetails(studentID, cookie string) (string, string, string, stri
 	} else if statusCode != http.StatusOK {
 		return "", "", "", "", "", errors.New(fmt.Sprintf("ERROR: Unable to fetch DegreeWorks HTML file. HTTP status code: %v.", statusCode))
 	}
-	
+
 	r, _ := regexp.Compile(`(?s)<StudentData>(.*)</StudentData>`)
 	studentData := r.FindStringSubmatch(responseHTML)[1]
-	
+
 	r, _ = regexp.Compile(`(?s)<GoalDtl.*School="(?P<school>.*?)".*Degree="(?P<degree_code>.*?)".*StuLevel="(?P<student_level_code>.*?)".*</GoalDtl>.*<GoalDataDtl.*?GoalCode="MAJOR".*?GoalValue="(?P<major_code>.*?)".*?</GoalDataDtl>`)
 	matches := r.FindStringSubmatch(studentData)
 	groups := make(map[string]string)
@@ -77,16 +77,16 @@ func fetchStudentDetails(studentID, cookie string) (string, string, string, stri
 			groups[name] = matches[i]
 		}
 	}
-	
+
 	r, _ = regexp.Compile(fmt.Sprintf(`(?s)sMajorPicklist\[sMajorPicklist\.length\] = new DataItem\("%s *", "(.*?) *"\);`, groups["major_code"]))
 	studentMajor := r.FindStringSubmatch(responseHTML)[1]
-	
+
 	r, _ = regexp.Compile(fmt.Sprintf(`(?s)sLevelPicklist\[sLevelPicklist\.length\] = new DataItem\("%s *", "(.*?) *"\);`, groups["student_level_code"]))
 	studentLevel := r.FindStringSubmatch(responseHTML)[1]
-	
+
 	r, _ = regexp.Compile(fmt.Sprintf(`(?s)sDegreePicklist\[sDegreePicklist\.length\] = new DataItem\("%s *", "(.*?) *"\);`, groups["degree_code"]))
 	degreeName := r.FindStringSubmatch(responseHTML)[1]
-	
+
 	return groups["school"], groups["degree_code"], degreeName, studentLevel, studentMajor, nil
 }
 
@@ -116,7 +116,7 @@ func fetchCourses(depts []string) {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	steps := make([]Department, 0)
 	if len(depts) > 0 {
 		for _, dept := range depts {
@@ -129,13 +129,13 @@ func fetchCourses(depts []string) {
 			steps = append(steps, Department{Dept: dept, Option: deptURL})
 		}
 	}
-	
+
 	uiprogress.Start()
 	width, _ := terminal.Width()
 	bar := uiprogress.AddBar(len(steps) + 1)
 	bar.Width = int(width) - (8 + 1) - (1 + 4)
 	bar.AppendCompleted()
-	
+
 	bar.PrependFunc(func(b *uiprogress.Bar) string {
 		step := "LOADING"
 		if b.Current() == len(steps) {
@@ -145,21 +145,21 @@ func fetchCourses(depts []string) {
 		}
 		return fmt.Sprintf("%-8s", step)
 	})
-	
+
 	process := func(dept, deptURL string) {
 		responseHTML, err := parsers.FetchCatalogue(deptURL)
 		if err != nil {
 			panic(err)
 		}
 		dir := strings.Replace(dept, "/", "_", -1)
-		filepath := fmt.Sprintf(RootPath + "registrar/%v/", dir)
+		filepath := fmt.Sprintf(RootPath+"registrar/%v/", dir)
 		os.MkdirAll(filepath, 0755)
-		err = ioutil.WriteFile(filepath + "catalogue.html", []byte(responseHTML), 0644)
+		err = ioutil.WriteFile(filepath+"catalogue.html", []byte(responseHTML), 0644)
 		if err != nil {
 			panic(err)
 		}
 	}
-	
+
 	for _, d := range steps {
 		bar.Incr()
 		time.Sleep(10 * time.Second)
@@ -173,7 +173,7 @@ func fetchPrereqs(depts []string) {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	steps := make([]Department, 0)
 	if len(depts) > 0 {
 		for _, dept := range depts {
@@ -186,13 +186,13 @@ func fetchPrereqs(depts []string) {
 			steps = append(steps, Department{Dept: dept, Option: option})
 		}
 	}
-	
+
 	uiprogress.Start()
 	width, _ := terminal.Width()
 	bar := uiprogress.AddBar(len(steps) + 1)
 	bar.Width = int(width) - (8 + 1) - (1 + 4)
 	bar.AppendCompleted()
-	
+
 	bar.PrependFunc(func(b *uiprogress.Bar) string {
 		step := "LOADING"
 		if b.Current() == len(steps) {
@@ -202,7 +202,7 @@ func fetchPrereqs(depts []string) {
 		}
 		return fmt.Sprintf("%-8s", step)
 	})
-	
+
 	r, _ := regexp.Compile(`(?s)<td class="error_message".*?>\s*(.*?)\s*</td>`)
 	process := func(dept, option string) bool {
 		responseHTML, err := parsers.FetchPrerequisites(term, option)
@@ -214,15 +214,15 @@ func fetchPrereqs(depts []string) {
 			panic(err)
 		}
 		dir := strings.Replace(dept, "/", "_", -1)
-		filepath := fmt.Sprintf(RootPath + "registrar/%v/", dir)
+		filepath := fmt.Sprintf(RootPath+"registrar/%v/", dir)
 		os.MkdirAll(filepath, 0755)
-		err = ioutil.WriteFile(filepath + "prereqs.html", []byte(responseHTML), 0644)
+		err = ioutil.WriteFile(filepath+"prereqs.html", []byte(responseHTML), 0644)
 		if err != nil {
 			panic(err)
 		}
 		return true
 	}
-	
+
 	for _, d := range steps {
 		bar.Incr()
 		time.Sleep(10 * time.Second)
@@ -243,22 +243,22 @@ func fetchSchedules(depts []string, archive bool) {
 		fmt.Println("WebSOC is not currently in an academic term.")
 		return
 	}
-	
+
 	steps := make([]Department, 0)
 	if archive {
 		yearTerm := term
 		year := types.AcademicYear() + 1
 		f := []interface{}{types.FallQuarter, types.SpringQuarter, types.WinterQuarter}
-		
+
 		for i := 1; i <= 9; i++ {
 			if (i % 3) == 0 {
 				year--
 			}
-			yearTerm = f[i % 3].(func(int) string)(year)
+			yearTerm = f[i%3].(func(int) string)(year)
 			if yearTerm > term {
 				continue
 			}
-			
+
 			if len(depts) > 0 {
 				for _, dept := range depts {
 					if option, ok := deptOptions[dept]; ok {
@@ -284,13 +284,13 @@ func fetchSchedules(depts []string, archive bool) {
 			}
 		}
 	}
-	
+
 	uiprogress.Start()
 	width, _ := terminal.Width()
 	bar := uiprogress.AddBar(len(steps) + 1)
 	bar.Width = int(width) - (13 + 1) - (1 + 4)
 	bar.AppendCompleted()
-	
+
 	bar.PrependFunc(func(b *uiprogress.Bar) string {
 		step := "LOADING"
 		if b.Current() == len(steps) {
@@ -311,11 +311,11 @@ func fetchSchedules(depts []string, archive bool) {
 		}
 		return fmt.Sprintf("%-13s", step)
 	})
-	
+
 	courseNums := make([]string, 0)
 	process := func(yearTerm, dept, option string) {
 		dir := strings.Replace(dept, "/", "_", -1)
-		filepath := fmt.Sprintf(RootPath + "registrar/%v/", dir)
+		filepath := fmt.Sprintf(RootPath+"registrar/%v/", dir)
 		socFile := filepath + fmt.Sprintf("soc_%v.txt", yearTerm)
 		if archive {
 			if _, err := os.Stat(socFile); err == nil {
@@ -333,7 +333,7 @@ func fetchSchedules(depts []string, archive bool) {
 			panic(err)
 		}
 	}
-	
+
 	for _, d := range steps {
 		bar.Incr()
 		process(d.Term, d.Dept, d.Option)
@@ -351,12 +351,12 @@ func main() {
 	archivePtr := flag.Bool("archive", false, "Fetch the past two years of schedules from WebSOC.")
 	dPtr := flag.String("d", "", "Comma-separated list of departments to use with `--prereqs` and `schedule` flags.")
 	flag.Parse()
-	
+
 	depts := make([]string, 0)
 	if len(*dPtr) > 0 {
 		depts = strings.Split(*dPtr, ",")
 	}
-	
+
 	if len(*cookiePtr) > 0 {
 		if len(*studentIDptr) == 0 {
 			studentID, err := fetchStudentID(*cookiePtr)
@@ -365,19 +365,19 @@ func main() {
 			}
 			*studentIDptr = studentID
 		}
-		
+
 		school, degree, degreeName, studentLevel, studentMajor, err := fetchStudentDetails(*studentIDptr, *cookiePtr)
 		if err != nil {
 			panic(err)
 		}
-		
+
 		responseXML, err := fetchXML(*studentIDptr, school, degree, degreeName, studentLevel, studentMajor, *cookiePtr)
 		if err != nil {
 			panic(err)
 		}
-		
+
 		if *cachePtr {
-			filepath := fmt.Sprintf(RootPath + "DGW_Report-%v.xsl", *studentIDptr)
+			filepath := fmt.Sprintf(RootPath+"DGW_Report-%v.xsl", *studentIDptr)
 			err = ioutil.WriteFile(filepath, []byte(responseXML), 0644)
 			if err != nil {
 				panic(err)
